@@ -101,14 +101,19 @@ export default function CameraPage({ onBack, onResult }) {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const width = video.videoWidth || 640;
-    const height = video.videoHeight || 480;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
 
-    canvas.width = width;
-    canvas.height = height;
+    // Tangkap area 1:1 di tengah viewfinder agar sesuai dengan input 224x224 model
+    const cropSize = Math.min(vw, vh);
+    const sx = Math.round((vw - cropSize) / 2);
+    const sy = Math.round((vh - cropSize) / 2);
+
+    canvas.width = cropSize;
+    canvas.height = cropSize;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, cropSize, cropSize);
 
     const previewUrl = canvas.toDataURL('image/jpeg', 0.92);
     canvas.toBlob(
@@ -208,12 +213,17 @@ export default function CameraPage({ onBack, onResult }) {
             {/* Bottom Right */}
             <span className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-[#F4F3EF]" />
 
-            {/* Center Crosshair */}
+            {/* Center 1:1 Target Frame & Crosshair */}
             {cameraStatus === 'LIVE FEED' && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative w-8 h-8">
-                  <span className="absolute left-1/2 top-0 bottom-0 w-px bg-[#E63946]/80 -translate-x-1/2" />
-                  <span className="absolute top-1/2 left-0 right-0 h-px bg-[#E63946]/80 -translate-y-1/2" />
+                <div className="relative h-full aspect-square border border-[#F4F3EF]/40 flex items-center justify-center">
+                  <div className="relative w-8 h-8">
+                    <span className="absolute left-1/2 top-0 bottom-0 w-px bg-[#E63946]/80 -translate-x-1/2" />
+                    <span className="absolute top-1/2 left-0 right-0 h-px bg-[#E63946]/80 -translate-y-1/2" />
+                  </div>
+                  <span className="absolute bottom-2 font-mono text-[10px] tracking-widest text-[#F4F3EF]/80 bg-[#111111]/70 px-2 py-0.5 uppercase">
+                    AREA CROP 1:1
+                  </span>
                 </div>
               </div>
             )}

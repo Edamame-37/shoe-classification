@@ -106,6 +106,26 @@ export default function ResultPage({ result, onRescan }) {
                 {brand.overview}
               </p>
             </div>
+
+            {result?.probabilities && (
+              <div className="pt-3 border-t border-[#D4D2CB]">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-[#555555] mb-2">
+                  DISTRIBUSI SKOR MODEL ({result.inferenceMs} MS)
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {Object.entries(result.probabilities).map(([key, val]) => (
+                    <div key={key} className="border border-[#D4D2CB] bg-white px-3 py-2">
+                      <div className="flex items-center justify-between font-mono text-[11px] uppercase">
+                        <span className={key === brand.id ? 'font-bold text-[#111111]' : 'text-[#555555]'}>
+                          {key}
+                        </span>
+                        <span className="font-semibold">{(val * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
