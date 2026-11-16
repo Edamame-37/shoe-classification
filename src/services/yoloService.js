@@ -1,5 +1,5 @@
 import * as ort from 'onnxruntime-web';
-import modelUrl from 'C:/my-project/shoe-classification/model/2026-11-15_22-59-37_final-best/model.onnx?url';
+import modelUrl from '../../model/2026-11-15_22-59-37_final-best/model.onnx?url';
 
 const CLASS_NAMES = ['adidas', 'converse', 'nike'];
 const INPUT_SIZE = 224;

@@ -12,6 +12,7 @@ export default function CameraPage({ onBack, onResult }) {
   const [cameraError, setCameraError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processError, setProcessError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -127,9 +128,13 @@ export default function CameraPage({ onBack, onResult }) {
     );
   }
 
-  function handleFileChange(e) {
-    const file = e.target.files?.[0];
+  function handleImageFile(file) {
     if (!file) return;
+
+    if (!file.type || !file.type.startsWith('image/')) {
+      setProcessError('Format file tidak didukung. Gunakan file gambar (JPG, PNG, WEBP).');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -138,7 +143,45 @@ export default function CameraPage({ onBack, onResult }) {
       processImageFile(file, previewUrl, cleanName);
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    handleImageFile(file);
     e.target.value = '';
+  }
+
+  function handleDragEnter(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isProcessing) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isProcessing && !isDragging) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragging(false);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isProcessing) return;
+
+    const file = e.dataTransfer?.files?.[0];
+    handleImageFile(file);
   }
 
   return (
@@ -186,12 +229,20 @@ export default function CameraPage({ onBack, onResult }) {
       {/* Viewfinder Area */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-10 flex flex-col justify-between gap-6">
         <div className="flex items-center justify-between font-mono text-[11px] text-[#555555] uppercase tracking-widest">
-          <span>OPTICAL VIEWFINDER // 1:1 - 4:3</span>
+          <span>OPTICAL VIEWFINDER // DRAG &amp; DROP SUPPORTED</span>
           <span>TARGET: ADIDAS / CONVERSE / NIKE</span>
         </div>
 
-        {/* Camera Frame */}
-        <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-[#111111] border border-[#111111] overflow-hidden flex items-center justify-center">
+        {/* Camera Frame (also acts as Drag & Drop Zone) */}
+        <div
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative w-full aspect-[4/3] sm:aspect-[16/10] bg-[#111111] border overflow-hidden flex items-center justify-center transition-colors ${
+            isDragging ? 'border-[#E63946] border-2' : 'border-[#111111]'
+          }`}
+        >
           <video
             ref={videoRef}
             playsInline
@@ -238,7 +289,20 @@ export default function CameraPage({ onBack, onResult }) {
               </div>
               <p className="text-sm text-[#111111] mb-2 font-medium">{cameraError}</p>
               <p className="font-mono text-xs text-[#555555]">
-                Gunakan tombol IMPORT GAMBAR di bawah untuk memilih foto sepatu dari perangkat Anda.
+                Seret &amp; lepas foto sepatu ke area ini atau gunakan tombol IMPORT GAMBAR di bawah.
+              </p>
+            </div>
+          )}
+
+          {/* Drag & Drop Active Overlay */}
+          {isDragging && (
+            <div className="pointer-events-none absolute inset-3 z-20 border-2 border-dashed border-[#E63946] bg-[#111111]/90 flex flex-col items-center justify-center p-6 text-center">
+              <Upload className="w-6 h-6 text-[#E63946] stroke-[1.75] mb-3" />
+              <p className="font-mono text-sm sm:text-base font-semibold text-[#F4F3EF] tracking-widest uppercase">
+                LEPASKAN FILE GAMBAR DI SINI
+              </p>
+              <p className="font-mono text-[11px] text-[#F4F3EF]/70 tracking-wider uppercase mt-1">
+                FORMAT: JPG / PNG / WEBP
               </p>
             </div>
           )}
