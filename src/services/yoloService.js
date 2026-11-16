@@ -1,8 +1,9 @@
 import * as ort from 'onnxruntime-web';
+import modelUrl from 'C:/my-project/shoe-classification/model/2026-11-15_22-59-37_final-best/model.onnx?url';
 
 const CLASS_NAMES = ['adidas', 'converse', 'nike'];
 const INPUT_SIZE = 224;
-const MODEL_URL = '/best.onnx';
+const MODEL_URL = modelUrl;
 const PRIOR_DEBIASED_ALPHA = 0.9;
 
 ort.env.wasm.numThreads = 1;
@@ -108,7 +109,7 @@ function applyPriorCalibration(probs, priorProbs) {
 }
 
 /**
- * Menjalankan inferensi nyata terhadap model best.onnx di browser:
+ * Menjalankan inferensi nyata terhadap model final-best/model.onnx di browser:
  * 1. 4-View Multi-Scale TTA (1.0x & 0.82x center crop, masing-masing normal + horizontal flip)
  * 2. Kalibrasi prior untuk menetralkan bias kelas dominan pada model tanpa mengubah bobot .onnx
  */
