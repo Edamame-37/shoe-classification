@@ -39,7 +39,7 @@ export default function ResultPage({ result, onRescan }) {
           <button
             type="button"
             onClick={onRescan}
-            className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-medium uppercase tracking-wider hover:text-[#555555] cursor-pointer"
+            className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-medium uppercase tracking-wider hover:text-[#555555] cursor-pointer py-2"
           >
             <ArrowLeft className="w-4 h-4 stroke-[1.75]" />
             <span>SCAN ULANG</span>
@@ -51,12 +51,12 @@ export default function ResultPage({ result, onRescan }) {
         </div>
       </header>
 
-      <main className="max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-12">
+      <main className="max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-12 pb-[max(2.5rem,env(safe-area-inset-bottom))] space-y-10 sm:space-y-12">
         {/* Header Hasil (2 Kolom Desktop, Stacked Mobile) */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10 items-start">
           {/* Kolom Kiri: Preview Foto */}
           <div className="lg:col-span-5">
-            <div className="relative border border-[#111111] bg-white aspect-[4/3] overflow-hidden">
+            <div className="relative border border-[#111111] bg-white aspect-square max-h-[320px] sm:max-h-none sm:aspect-[4/3] w-full overflow-hidden">
               {result?.imageUrl ? (
                 <img
                   src={result.imageUrl}
@@ -68,15 +68,15 @@ export default function ResultPage({ result, onRescan }) {
                   NO_PREVIEW_AVAILABLE
                 </div>
               )}
-              <span className="absolute top-3 left-3 bg-[#111111] text-[#F4F3EF] font-mono text-[11px] px-2.5 py-1 tracking-wider uppercase">
+              <span className="absolute top-3 left-3 bg-[#111111] text-[#F4F3EF] font-mono text-[10px] sm:text-[11px] px-2.5 py-1 tracking-wider uppercase max-w-[85%] truncate">
                 {fileLabel}
               </span>
             </div>
           </div>
 
           {/* Kolom Kanan: Identitas & Overview */}
-          <div className="lg:col-span-7 flex flex-col gap-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D4D2CB] pb-3">
+          <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4D2CB] pb-3">
               <span className="font-mono text-xs tracking-widest text-[#555555] uppercase">
                 HASIL KLASIFIKASI
               </span>
@@ -85,8 +85,8 @@ export default function ResultPage({ result, onRescan }) {
               </span>
             </div>
 
-            <div className="flex flex-wrap items-baseline justify-between gap-4">
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight uppercase leading-none">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 sm:gap-4">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight uppercase leading-none">
                 {brand.name}
               </h1>
 
@@ -98,7 +98,7 @@ export default function ResultPage({ result, onRescan }) {
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1 sm:pt-2">
               <p className="font-mono text-[11px] uppercase tracking-widest text-[#555555] mb-2">
                 OVERVIEW MEREK &amp; KARAKTER MATERIAL
               </p>
@@ -112,10 +112,10 @@ export default function ResultPage({ result, onRescan }) {
                 <p className="font-mono text-[11px] uppercase tracking-widest text-[#555555] mb-2">
                   DISTRIBUSI SKOR MODEL ({result.inferenceMs} MS)
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   {Object.entries(result.probabilities).map(([key, val]) => (
-                    <div key={key} className="border border-[#D4D2CB] bg-white px-3 py-2">
-                      <div className="flex items-center justify-between font-mono text-[11px] uppercase">
+                    <div key={key} className="border border-[#D4D2CB] bg-white px-2.5 sm:px-3 py-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between font-mono text-[10px] sm:text-[11px] uppercase gap-0.5">
                         <span className={key === brand.id ? 'font-bold text-[#111111]' : 'text-[#555555]'}>
                           {key}
                         </span>
@@ -130,7 +130,7 @@ export default function ResultPage({ result, onRescan }) {
         </section>
 
         {/* Katalog & Link Platform Penjualan */}
-        <section className="border-t border-[#111111] pt-8">
+        <section className="border-t border-[#111111] pt-6 sm:pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight uppercase">
               KATALOG &amp; TAUTAN PEMBELIAN
@@ -140,7 +140,7 @@ export default function ResultPage({ result, onRescan }) {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {brand.catalog.map((item) => (
               <article
                 key={item.id}
@@ -154,7 +154,7 @@ export default function ResultPage({ result, onRescan }) {
                     </span>
                   </div>
 
-                  <div className="p-5 border-b border-[#D4D2CB]">
+                  <div className="p-4 sm:p-5 border-b border-[#D4D2CB]">
                     <p className="font-mono text-[11px] text-[#555555] uppercase tracking-wider mb-1">
                       {item.category}
                     </p>
@@ -165,43 +165,43 @@ export default function ResultPage({ result, onRescan }) {
                   </div>
                 </div>
 
-                {/* Platform Links */}
+                {/* Platform Links (Min 40px tap target) */}
                 <div className="p-4 grid grid-cols-2 gap-2">
                   <a
                     href={item.links.official}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-between border border-[#111111] bg-[#111111] text-[#F4F3EF] hover:bg-[#333333] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
+                    className="min-h-[40px] inline-flex items-center justify-between border border-[#111111] bg-[#111111] text-[#F4F3EF] hover:bg-[#333333] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
                   >
                     <span>OFFICIAL</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75]" />
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75] shrink-0" />
                   </a>
                   <a
                     href={item.links.tokopedia}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
+                    className="min-h-[40px] inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
                   >
                     <span>TOKOPEDIA</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75]" />
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75] shrink-0" />
                   </a>
                   <a
                     href={item.links.shopee}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
+                    className="min-h-[40px] inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
                   >
                     <span>SHOPEE</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75]" />
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75] shrink-0" />
                   </a>
                   <a
                     href={item.links.zalora}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
+                    className="min-h-[40px] inline-flex items-center justify-between border border-[#111111] bg-white text-[#111111] hover:bg-[#111111] hover:text-[#F4F3EF] px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
                   >
                     <span>ZALORA</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75]" />
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[1.75] shrink-0" />
                   </a>
                 </div>
               </article>
