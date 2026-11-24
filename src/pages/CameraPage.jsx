@@ -249,7 +249,7 @@ export default function CameraPage({
             onClick={onToggleClassificationMode}
             aria-label={`Ganti mode klasifikasi dari ${classificationMode}`}
             aria-pressed={classificationMode === 'yolo'}
-            className="font-mono text-[10px] font-semibold uppercase tracking-widest border border-[#111111] px-2 py-1 opacity-20 hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+            className="font-mono text-[10px] font-semibold uppercase tracking-widest border border-[#111111] px-2 py-1 opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
           >
             {classificationMode === 'mock' ? 'MOCK' : 'YOLO'}
           </button>
