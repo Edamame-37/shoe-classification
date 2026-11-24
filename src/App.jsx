@@ -6,6 +6,7 @@ import ResultPage from './pages/ResultPage';
 export default function App() {
   const [view, setView] = useState('landing'); // 'landing' | 'camera' | 'result'
   const [scanResult, setScanResult] = useState(null);
+  const [classificationMode, setClassificationMode] = useState('mock');
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(() =>
     typeof window !== 'undefined'
@@ -55,13 +56,24 @@ export default function App() {
     setView('result');
   }
 
+  function handleToggleClassificationMode() {
+    setClassificationMode((currentMode) => (currentMode === 'mock' ? 'yolo' : 'mock'));
+  }
+
   function handleRescan() {
     setScanResult(null);
     setView('camera');
   }
 
   if (view === 'camera') {
-    return <CameraPage onBack={handleBackToLanding} onResult={handleClassificationResult} />;
+    return (
+      <CameraPage
+        onBack={handleBackToLanding}
+        onResult={handleClassificationResult}
+        classificationMode={classificationMode}
+        onToggleClassificationMode={handleToggleClassificationMode}
+      />
+    );
   }
 
   if (view === 'result' && scanResult) {
