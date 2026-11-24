@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Camera, Upload, AlertTriangle, SwitchCamera } from 'lucide-react';
 import { classifyShoe } from '../services/yoloService';
 
-export default function CameraPage({ onBack, onResult }) {
+export default function CameraPage({
+  onBack,
+  onResult,
+  classificationMode,
+  onToggleClassificationMode,
+}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -104,7 +109,7 @@ export default function CameraPage({ onBack, onResult }) {
     setIsProcessing(true);
 
     try {
-      const prediction = await classifyShoe(file);
+      const prediction = await classifyShoe(file, classificationMode);
       // Hentikan stream sebelum pindah halaman
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -237,6 +242,16 @@ export default function CameraPage({ onBack, onResult }) {
           >
             <ArrowLeft className="w-4 h-4 stroke-[1.75]" />
             <span>KEMBALI</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onToggleClassificationMode}
+            aria-label={`Ganti mode klasifikasi dari ${classificationMode}`}
+            aria-pressed={classificationMode === 'yolo'}
+            className="font-mono text-[10px] font-semibold uppercase tracking-widest border border-[#111111] px-2 py-1 opacity-20 hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+          >
+            {classificationMode === 'mock' ? 'MOCK' : 'YOLO'}
           </button>
 
           <div className="inline-flex items-center gap-2 font-mono text-xs tracking-wider uppercase">
