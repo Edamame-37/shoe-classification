@@ -1,0 +1,29 @@
+{
+  "model": "yolo11s_high_resolution",
+  "strategy": "single",
+  "image_size": 320,
+  "classes": [
+    "adidas",
+    "converse",
+    "nike"
+  ],
+  "metrics": {
+    "accuracy": 0.8888888888888888,
+    "macro_precision": 0.8892619725953059,
+    "macro_recall": 0.888888888888889,
+    "macro_f1": 0.8888677127670839,
+    "weighted_f1": 0.8888677127670839,
+    "selected_model": "yolo11s_high_resolution",
+    "selected_strategy": "single",
+    "image_size": 320,
+    "validation_macro_f1": 0.9334956307433372
+  },
+  "acceptance": {
+    "validation_improved": true,
+    "test_accuracy_improved": true,
+    "test_macro_f1_improved": true,
+    "class_f1_acceptable": true
+  },
+  "pt_sha256": "149807B8AF2AC2D1749B934BAC019B1FC067240FAD5D604DEFE461457C0073B4",
+  "onnx_sha256": "A71080ACD5600BDDE8525468BDBB57BB8EFDDB7A5D54E3EB1066C06433799BB3"
+}
