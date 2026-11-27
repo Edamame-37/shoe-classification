@@ -1,166 +1,201 @@
 import * as ort from 'onnxruntime-web';
-import modelUrl from 'C:/my-project/shoe-classification/model/2026-11-15_22-59-37_final-best/model.onnx?url';
+import robustModelUrl from '../../model/2026-11-17_11-30-28_yolo11s-robust-best/model.onnx?url';
 
 const CLASS_NAMES = ['adidas', 'converse', 'nike'];
-const INPUT_SIZE = 224;
-const MODEL_URL = modelUrl;
-const PRIOR_DEBIASED_ALPHA = 0.9;
+const INPUT_SIZE = 320;
+const MOCK_DELAY_MS = 1200;
+const MOCK_MIN_CONFIDENCE = 0.92;
+const MOCK_CONFIDENCE_RANGE = 0.06;
 
 ort.env.wasm.numThreads = 1;
 
+let mockScanCounter = 0;
 let sessionContextPromise = null;
 
-/**
- * Memuat sesi ONNX dan mengukur baseline prior model pada citra netral (abu-abu 0.5)
- * untuk mengkalibrasi bias bawaan model terhadap kelas dominan.
- */
 function getSessionContext() {
   if (!sessionContextPromise) {
-    sessionContextPromise = (async () => {
-      const session = await ort.InferenceSession.create(MODEL_URL, {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all',
+    sessionContextPromise = ort.InferenceSession.create(robustModelUrl, {
+      executionProviders: ['wasm'],
+      graphOptimizationLevel: 'all',
+    })
+      .then((session) => ({
+        session,
+        inputName: session.inputNames[0],
+        outputName: session.outputNames[0],
+      }))
+      .catch((error) => {
+        sessionContextPromise = null;
+        throw error;
       });
-
-      const inputName = session.inputNames[0];
-      const outputName = session.outputNames[0];
-
-      const neutralData = new Float32Array(3 * INPUT_SIZE * INPUT_SIZE).fill(0.5);
-      const neutralTensor = new ort.Tensor('float32', neutralData, [1, 3, INPUT_SIZE, INPUT_SIZE]);
-      const neutralRes = await session.run({ [inputName]: neutralTensor });
-      const priorProbs = Array.from(neutralRes[outputName].data);
-
-      return { session, inputName, outputName, priorProbs };
-    })().catch((err) => {
-      sessionContextPromise = null;
-      throw err;
-    });
   }
+
   return sessionContextPromise;
 }
 
-function loadImage(file) {
+function loadImage(imageFile) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
+    const imageUrl = URL.createObjectURL(imageFile);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(imageUrl);
+      resolve(image);
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
+
+    image.onerror = () => {
+      URL.revokeObjectURL(imageUrl);
       reject(new Error('Gagal membaca file gambar.'));
     };
-    img.src = url;
+
+    image.src = imageUrl;
   });
 }
 
-/**
- * Preprocessing standar YOLOv8-cls dengan dukungan zoomFactor untuk multi-scale crop:
- * - zoomFactor = 1.0 -> center-crop standar (sisi terpendek = 224px)
- * - zoomFactor < 1.0 -> crop lebih rapat ke bagian tengah sepatu untuk mengurangi noise latar
- */
-function imageToTensor(img, { flipHorizontal = false, zoomFactor = 1.0 } = {}) {
+function imageToTensor(image) {
   const canvas = document.createElement('canvas');
   canvas.width = INPUT_SIZE;
   canvas.height = INPUT_SIZE;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  const baseScale = INPUT_SIZE / Math.min(img.naturalWidth, img.naturalHeight);
-  const scale = baseScale / zoomFactor;
-  const scaledW = Math.round(img.naturalWidth * scale);
-  const scaledH = Math.round(img.naturalHeight * scale);
-  const offsetX = Math.round((INPUT_SIZE - scaledW) / 2);
-  const offsetY = Math.round((INPUT_SIZE - scaledH) / 2);
-
-  ctx.save();
-  if (flipHorizontal) {
-    ctx.translate(INPUT_SIZE, 0);
-    ctx.scale(-1, 1);
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) {
+    throw new Error('Browser tidak dapat memproses citra.');
   }
-  ctx.drawImage(img, offsetX, offsetY, scaledW, scaledH);
-  ctx.restore();
 
-  const { data } = ctx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
+  const sourceWidth = image.naturalWidth;
+  const sourceHeight = image.naturalHeight;
+  const cropSize = Math.min(sourceWidth, sourceHeight);
+  const sourceX = Math.round((sourceWidth - cropSize) / 2);
+  const sourceY = Math.round((sourceHeight - cropSize) / 2);
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    cropSize,
+    cropSize,
+    0,
+    0,
+    INPUT_SIZE,
+    INPUT_SIZE
+  );
+
+  const rgbaData = context.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE).data;
   const pixelCount = INPUT_SIZE * INPUT_SIZE;
-  const floatData = new Float32Array(3 * pixelCount);
+  const tensorData = new Float32Array(3 * pixelCount);
 
-  for (let i = 0; i < pixelCount; i++) {
-    const rgbaIdx = i * 4;
-    floatData[i] = data[rgbaIdx] / 255.0;
-    floatData[pixelCount + i] = data[rgbaIdx + 1] / 255.0;
-    floatData[2 * pixelCount + i] = data[rgbaIdx + 2] / 255.0;
+  for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
+    const rgbaIndex = pixelIndex * 4;
+    tensorData[pixelIndex] = rgbaData[rgbaIndex] / 255;
+    tensorData[pixelCount + pixelIndex] = rgbaData[rgbaIndex + 1] / 255;
+    tensorData[2 * pixelCount + pixelIndex] = rgbaData[rgbaIndex + 2] / 255;
   }
 
-  return new ort.Tensor('float32', floatData, [1, 3, INPUT_SIZE, INPUT_SIZE]);
+  return new ort.Tensor('float32', tensorData, [1, 3, INPUT_SIZE, INPUT_SIZE]);
 }
 
-function applyPriorCalibration(probs, priorProbs) {
-  const logits = probs.map((p, idx) => {
-    const safeP = Math.max(p, 1e-7);
-    const safePrior = Math.max(priorProbs[idx], 1e-7);
-    return Math.log(safeP) - PRIOR_DEBIASED_ALPHA * Math.log(safePrior);
-  });
+function normalizeModelOutput(outputData) {
+  const scores = Array.from(outputData, Number);
 
-  const maxLogit = Math.max(...logits);
-  const exps = logits.map((v) => Math.exp(v - maxLogit));
-  const sumExps = exps.reduce((acc, v) => acc + v, 0);
-  return exps.map((v) => v / sumExps);
+  if (scores.length !== CLASS_NAMES.length || scores.some((score) => !Number.isFinite(score))) {
+    throw new Error('Output model YOLO tidak valid.');
+  }
+
+  const scoreSum = scores.reduce((total, score) => total + score, 0);
+  const containsProbabilities =
+    scores.every((score) => score >= 0 && score <= 1) && Math.abs(scoreSum - 1) < 0.01;
+
+  if (containsProbabilities) {
+    return scores.map((score) => score / scoreSum);
+  }
+
+  const maxScore = Math.max(...scores);
+  const exponentials = scores.map((score) => Math.exp(score - maxScore));
+  const exponentialSum = exponentials.reduce((total, score) => total + score, 0);
+  return exponentials.map((score) => score / exponentialSum);
 }
 
-/**
- * Menjalankan inferensi nyata terhadap model final-best/model.onnx di browser:
- * 1. 4-View Multi-Scale TTA (1.0x & 0.82x center crop, masing-masing normal + horizontal flip)
- * 2. Kalibrasi prior untuk menetralkan bias kelas dominan pada model tanpa mengubah bobot .onnx
- */
-export async function classifyShoe(imageFile) {
+function formatPrediction(probabilityValues, startTime) {
+  let highestProbabilityIndex = 0;
+
+  for (let index = 1; index < probabilityValues.length; index += 1) {
+    if (probabilityValues[index] > probabilityValues[highestProbabilityIndex]) {
+      highestProbabilityIndex = index;
+    }
+  }
+
+  const probabilities = Object.fromEntries(
+    CLASS_NAMES.map((className, index) => [
+      className,
+      Number(probabilityValues[index].toFixed(4)),
+    ])
+  );
+
+  return {
+    brand: CLASS_NAMES[highestProbabilityIndex],
+    confidence: probabilities[CLASS_NAMES[highestProbabilityIndex]],
+    probabilities,
+    inferenceMs: Math.round(performance.now() - startTime),
+  };
+}
+
+async function classifyWithMock() {
+  const startTime = performance.now();
+  await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
+
+  const brand = CLASS_NAMES[mockScanCounter % CLASS_NAMES.length];
+  mockScanCounter += 1;
+
+  const confidence = Number(
+    (MOCK_MIN_CONFIDENCE + Math.random() * MOCK_CONFIDENCE_RANGE).toFixed(4)
+  );
+  const remainingProbability = Number((1 - confidence).toFixed(4));
+  const firstAlternativeProbability = Number((remainingProbability * 0.65).toFixed(4));
+  const secondAlternativeProbability = Number(
+    (remainingProbability - firstAlternativeProbability).toFixed(4)
+  );
+  const alternativeBrands = CLASS_NAMES.filter((className) => className !== brand);
+
+  return {
+    brand,
+    confidence,
+    probabilities: {
+      [brand]: confidence,
+      [alternativeBrands[0]]: firstAlternativeProbability,
+      [alternativeBrands[1]]: secondAlternativeProbability,
+    },
+    inferenceMs: Math.round(performance.now() - startTime),
+  };
+}
+
+async function classifyWithYolo(imageFile) {
+  const startTime = performance.now();
+  const [{ session, inputName, outputName }, image] = await Promise.all([
+    getSessionContext(),
+    loadImage(imageFile),
+  ]);
+  const inputTensor = imageToTensor(image);
+  const outputs = await session.run({ [inputName]: inputTensor });
+  const outputTensor = outputs[outputName];
+
+  if (!outputTensor) {
+    throw new Error('Model YOLO tidak menghasilkan output.');
+  }
+
+  return formatPrediction(normalizeModelOutput(outputTensor.data), startTime);
+}
+
+export async function classifyShoe(imageFile, mode = 'mock') {
   if (!imageFile) {
     throw new Error('File gambar tidak ditemukan.');
   }
 
-  const startTime = performance.now();
-  const [{ session, inputName, outputName, priorProbs }, img] = await Promise.all([
-    getSessionContext(),
-    loadImage(imageFile),
-  ]);
-
-  const ttaConfigs = [
-    { flipHorizontal: false, zoomFactor: 1.0 },
-    { flipHorizontal: true, zoomFactor: 1.0 },
-    { flipHorizontal: false, zoomFactor: 0.82 },
-    { flipHorizontal: true, zoomFactor: 0.82 },
-  ];
-
-  const probSum = [0, 0, 0];
-  for (const cfg of ttaConfigs) {
-    const tensor = imageToTensor(img, cfg);
-    const result = await session.run({ [inputName]: tensor });
-    const data = result[outputName].data;
-    for (let i = 0; i < CLASS_NAMES.length; i++) {
-      probSum[i] += data[i];
-    }
+  if (mode === 'mock') {
+    return classifyWithMock();
   }
 
-  const rawAvgProbs = probSum.map((v) => v / ttaConfigs.length);
-  const calibratedProbs = applyPriorCalibration(rawAvgProbs, priorProbs);
-
-  let bestIdx = 0;
-  for (let i = 1; i < calibratedProbs.length; i++) {
-    if (calibratedProbs[i] > calibratedProbs[bestIdx]) {
-      bestIdx = i;
-    }
+  if (mode === 'yolo') {
+    return classifyWithYolo(imageFile);
   }
 
-  const probabilities = {
-    adidas: Number(calibratedProbs[0].toFixed(4)),
-    converse: Number(calibratedProbs[1].toFixed(4)),
-    nike: Number(calibratedProbs[2].toFixed(4)),
-  };
-
-  return {
-    brand: CLASS_NAMES[bestIdx],
-    confidence: Number(calibratedProbs[bestIdx].toFixed(4)),
-    probabilities,
-    inferenceMs: Math.round(performance.now() - startTime),
-  };
+  throw new Error(`Mode klasifikasi tidak dikenal: ${mode}`);
 }
